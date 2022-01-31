@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31321.278
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FindSpace", "FindSpace\FindSpace.csproj", "{DD2D6173-448A-4C48-80F1-44F3D57C85E5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FindSpaceTests", "FindSpaceTests\FindSpaceTests.csproj", "{047EDEEE-E9C8-4F92-8D03-41977466BDC3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DD2D6173-448A-4C48-80F1-44F3D57C85E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD2D6173-448A-4C48-80F1-44F3D57C85E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD2D6173-448A-4C48-80F1-44F3D57C85E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD2D6173-448A-4C48-80F1-44F3D57C85E5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{047EDEEE-E9C8-4F92-8D03-41977466BDC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{047EDEEE-E9C8-4F92-8D03-41977466BDC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{047EDEEE-E9C8-4F92-8D03-41977466BDC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{047EDEEE-E9C8-4F92-8D03-41977466BDC3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8FE23E26-E012-43CF-96AA-5AFC595FBFEA}
+	EndGlobalSection
+EndGlobal
