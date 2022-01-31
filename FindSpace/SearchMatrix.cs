@@ -87,6 +87,7 @@ namespace SoupSoftware.WhiteSpace
             int len = buffer.Length / depth;
             int[] RoundCol = new int[len];
             Parallel.For(0,len, (i) => { 
+                //todo: write new function below does not work.
                  RoundCol[i]=GetbitColor(buffer, i*depth);
             });
 
@@ -126,8 +127,7 @@ namespace SoupSoftware.WhiteSpace
 
             Parallel.For(WorkArea.Top, WorkArea.Bottom, (int i) =>
             {
-                //for (int y = ; y <= ; y++)
-                // {
+                
                 rowSum = CalculateRowSum(stampwidth, WorkArea, i, buffer, depth, width, Settings, colorEvaluation);
                 rowSums[i] = rowSum;
             });
@@ -204,7 +204,7 @@ namespace SoupSoftware.WhiteSpace
             int colSum;
             Parallel.For(WorkArea.Left, WorkArea.Right, (x) =>
             {
-                //for (int x = WorkArea.Left; x <= WorkArea.Right; x++)
+                
 
                 colSum = CalculateColSum(stampheight, WorkArea, x);
                 colSums[x] = colSum;

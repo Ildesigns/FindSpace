@@ -1,5 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SoupSoftware.FindSpace.Interfaces;
 using SoupSoftware.FindSpace.Optimisers;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -19,26 +21,7 @@ namespace FindSpaceTests
 
     }
 
-        [DataTestMethod]
-        [DataRow(100,new int[]{10,10})]
-        [DataRow(160, new int[] { 16, 10 })]
-        [DataRow(160, new int[] { 10, 16 })]
-        public void DiagonalPointGenTouchesAllPoints(int val, int[] dims)
-        {
-            
-            DiagonalPointGenerator gen = new DiagonalPointGenerator();
-            int[] r = Enumerable.Range(0, dims[0]).ToArray();
-            int[] r2 = Enumerable.Range(0, dims[1]).ToArray();
-            p.AddRange(gen.GetOptimisedPoints(r, r2));
-           
-            Assert.AreEqual(val, p.Distinct().Count());
-        }
-
-        [DataTestMethod]
-        [DataRow(100, new int[] { 10, 10 })]
-        [DataRow(160, new int[] { 16, 10 })]
-        [DataRow(160, new int[] { 10, 16 })]
-        public void HorizontalThenVerticalSweepPointGenerator(int val, int[] dims)
+         public void HorizontalThenVerticalSweepPointGenerator(int val, int[] dims)
         {
             List<Point> p = new List<Point>();
             HorizontalThenVerticalSweepPointGenerator gen = new HorizontalThenVerticalSweepPointGenerator();
@@ -48,20 +31,28 @@ namespace FindSpaceTests
 
             Assert.AreEqual(val, p.Distinct().Count());
         }
-
         [DataTestMethod]
-        [DataRow(100, new int[] { 10, 10 })]
-        [DataRow(160, new int[] { 16, 10 })]
-        [DataRow(160, new int[] { 10, 16 })]
-        public void VerticalThenHorizontalSweepPointGenerator(int val, int[] dims)
+        [DataRow(typeof(VerticalThenHorizontalSweepPointGenerator), new int[] { 10, 10 })]
+        [DataRow(typeof(VerticalThenHorizontalSweepPointGenerator),  new int[] { 16, 10 })]
+        [DataRow(typeof(VerticalThenHorizontalSweepPointGenerator), new int[] { 10, 16 })]
+
+        [DataRow(typeof(HorizontalThenVerticalSweepPointGenerator), new int[] { 10, 10 })]
+        [DataRow(typeof(HorizontalThenVerticalSweepPointGenerator), new int[] { 16, 10 })]
+        [DataRow(typeof(HorizontalThenVerticalSweepPointGenerator), new int[] { 10, 16 })]
+
+        [DataRow(typeof(DiagonalPointGenerator), new int[] { 10, 10 })]
+        [DataRow(typeof(DiagonalPointGenerator), new int[] { 16, 10 })]
+        [DataRow(typeof(DiagonalPointGenerator), new int[] { 10, 16 })]
+
+        public void PointGeneratorTests(Type t, int[] dims)
         {
             List<Point> p = new List<Point>();
-            VerticalThenHorizontalSweepPointGenerator gen = new VerticalThenHorizontalSweepPointGenerator();
+            IPointGenerator gen = (IPointGenerator)Activator.CreateInstance(t);
             int[] r = Enumerable.Range(0, dims[0]).ToArray();
             int[] r2 = Enumerable.Range(0, dims[1]).ToArray();
             p.AddRange(gen.GetOptimisedPoints(r, r2));
 
-            Assert.AreEqual(val, p.Distinct().Count());
+            Assert.AreEqual(dims[0]*dims[1], p.Distinct().Count());
         }
 
 
