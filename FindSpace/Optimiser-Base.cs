@@ -23,7 +23,9 @@ namespace SoupSoftware.FindSpace.Optimisers
                   YAxisResolver.GetOptimisedPositions(rect.Top, rect.Bottom)))
             {
                 yield return p;
-                Trace.TraceInformation(p.X + "," + p.Y);
+//#if (DEBUG)
+//                Trace.TraceInformation(p.X + "," + p.Y);
+//#endif
             }
         }
         public abstract IPointGenerator pointGenerator { get; }
