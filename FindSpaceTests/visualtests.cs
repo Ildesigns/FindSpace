@@ -99,13 +99,13 @@ namespace FindSpaceTests
             sw.Start();
             SoupSoftware.FindSpace.WhiteSpaceFinder w = new SoupSoftware.FindSpace.WhiteSpaceFinder(b, wsf);
             sw.Stop();
-            Trace.Write(sw.ElapsedMilliseconds / 1000);
-            sw.Start();
+            Trace.WriteLine("Init Image " + sw.ElapsedMilliseconds  +" ms");
             Rectangle stamp = new Rectangle(0, 0, 25, 25);
-            
+            sw.Reset();
+                sw.Start();
             Rectangle? r = w.FindSpaceFor(stamp);
             sw.Stop();
-            Trace.Write(sw.ElapsedMilliseconds / 1000);
+            Trace.WriteLine("Find Image " + sw.ElapsedMilliseconds + " ms");
             Assert.IsNotNull(r);
             if (r != null)
             {
