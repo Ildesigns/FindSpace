@@ -10,6 +10,73 @@ namespace SoupSoftware.FindSpace
 {
 
 
+  
+    public class ExactSearch : IDeepSearch
+    {
+        public int Search(ISearchMatrix masks,int Left, int Top, int Width, int Height)
+        {
+            
+            {
+
+                //counts how many zeros in a given sub array.
+
+                int res = 0;
+                try
+                {
+                    for (int a = Left; a <= Left + Width; a++)
+                    {
+                        if (masks.maskvalsy[a, Top] < Height)
+                        {
+                            for (int b = Top; b <= Top + Height; b++)
+                            {
+                                if (masks.mask[a, b] == 0)
+                                {
+                                    res++;
+                                }
+                            }
+
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+
+
+                }
+
+
+                return res;
+            }
+        }
+    }
+
+    class OptimisedSearch : IDeepSearch
+    {
+        public int Search(ISearchMatrix masks, int Left, int Top, int Width, int Height)
+        {
+
+            //counts how many zeros in a given sub array.
+
+            int res = 0;
+            try
+            {
+                for (int a = Left; a <= Left + Width; a++)
+                {
+                    if (masks.maskvalsy[a, Top] < Height) { res++; }
+                }
+            }
+            catch (Exception)
+            {
+
+
+            }
+
+
+            return res;
+        }
+
+    }
+
 
     public class WhiteSpaceFinder
     {
@@ -80,7 +147,6 @@ namespace SoupSoftware.FindSpace
                 TopLeftBiasedScanArea = RefineScanArea(masks,  TopLeftBiasedScanArea);
             }
 
-
             findReturn = FindLocations(stampwidth, stampheight, masks, TopLeftBiasedScanArea);
 
             if (Settings.AutoRotate && !findReturn.hasExactMatches() && stampheight != stampwidth)
@@ -88,10 +154,7 @@ namespace SoupSoftware.FindSpace
                 findReturn90 = FindLocations(stampheight, stampwidth, masks, TopLeftBiasedScanArea);
 
             }
-
             return SelectBestArea(stampwidth, stampheight, TopLeftBiasedScanArea, findReturn, findReturn90);
-
-            ;
         }
 
         private static Rectangle RefineScanArea(searchMatrix searchMatrix, Rectangle ScanArea)
@@ -172,34 +235,14 @@ namespace SoupSoftware.FindSpace
 
         
 
-        private delegate int Deepsearch(int Left, int Top, int Width, int Height);
+        
 
         private FindResults FindLocations(int stampwidth, int stampheight, searchMatrix masks, Rectangle ScanArea)
         {
 
-            Deepsearch searchAlgo;
+            
 
-            switch (this.Settings.SearchAlgorithm)
-            {
-                case SearchAlgorithm.Exact:
-                    {
-                        searchAlgo = CountZero;
-
-                        break;
-                    }
-                case SearchAlgorithm.Optimised:
-                    {
-                        searchAlgo = CountHeaders;
-
-                        break;
-                    }
-                default:
-                    {
-                        searchAlgo = CountZero;
-
-                        break;
-                    }
-            }
+           
 
 
             int deepCheckFail = (stampheight * stampwidth) + 1;
@@ -214,7 +257,8 @@ namespace SoupSoftware.FindSpace
                 if (masks.maskvalsx[p.X, p.Y] > stampwidth && masks.maskvalsy[p.X, p.Y] > stampheight)
                 {
 
-                    findReturn.possibleMatches[p.X, p.Y] = searchAlgo.Invoke(p.X, p.Y, stampwidth, stampheight);
+                    findReturn.possibleMatches[p.X, p.Y] = Settings.SearchAlgorithm.Search(masks,
+                        p.X, p.Y, stampwidth, stampheight);
 
 
 
@@ -240,61 +284,9 @@ namespace SoupSoftware.FindSpace
             return findReturn;
         }
 
-        int CountHeaders(int Left, int Top, int Width, int Height)
-        {
+      
 
-            //counts how many zeros in a given sub array.
-
-            int res = 0;
-            try
-            {
-                for (int a = Left; a <= Left + Width; a++)
-                {
-                    if (masks.maskvalsy[a, Top] < Height) { res++; }
-                }
-            }
-            catch (Exception)
-            {
-
-
-            }
-
-
-            return res;
-        }
-
-        int CountZero(int Left, int Top, int Width, int Height)
-        {
-
-            //counts how many zeros in a given sub array.
-
-            int res = 0;
-            try
-            {
-                for (int a = Left; a <= Left + Width; a++)
-                {
-                    if (masks.maskvalsy[a, Top] < Height)
-                    {
-                        for (int b = Top; b <= Top + Height; b++)
-                        {
-                            if (masks.mask[a, b] == 0)
-                            {
-                                res++;
-                            }
-                        }
-
-                    }
-                }
-            }
-            catch (Exception)
-            {
-
-
-            }
-
-
-            return res;
-        }
+      
 
 
     }

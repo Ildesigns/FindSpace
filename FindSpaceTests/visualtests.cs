@@ -78,29 +78,25 @@ namespace FindSpaceTests
         [DataRow(@"Test3.bmp", typeof(BottomCentreOptimiser))]
         [DataRow(@"Test3.bmp", typeof(BottomOptimiser))]
         [DataRow(@"Test3.bmp", typeof(BottomRightOptimiser))]
+     
         public void TestMethod(string testfilepath, Type type)
         {
             
             Bitmap b = CreateBitmap(testfilepath);
             SoupSoftware.FindSpace.Interfaces.IOptimiser optimiser;
-            if (type.GetConstructors().Any(x => x.GetParameters().Count() == 0))
-            {
+            
                  optimiser = (IOptimiser)Activator.CreateInstance(type);
-            }
-            else
-            {
-                Rectangle re = new Rectangle(0, 0, b.Width, b.Height);
-                optimiser = (IOptimiser)Activator.CreateInstance(type,new object[] {re });
-            }
+            
+           
                 SoupSoftware.FindSpace.WhitespacerfinderSettings wsf = new SoupSoftware.FindSpace.WhitespacerfinderSettings();
             wsf.Optimiser = optimiser;
-            wsf.SearchAlgorithm = SoupSoftware.FindSpace.SearchAlgorithm.Optimised;
-            Stopwatch sw = new Stopwatch();
+            wsf.SearchAlgorithm = new SoupSoftware.FindSpace.ExactSearch();
+                Stopwatch sw = new Stopwatch();
             sw.Start();
             SoupSoftware.FindSpace.WhiteSpaceFinder w = new SoupSoftware.FindSpace.WhiteSpaceFinder(b, wsf);
             sw.Stop();
             Trace.WriteLine("Init Image " + sw.ElapsedMilliseconds  +" ms");
-            Rectangle stamp = new Rectangle(0, 0, 25, 25);
+            Rectangle stamp = new Rectangle(0, 0, 60,60);
             sw.Reset();
                 sw.Start();
             Rectangle? r = w.FindSpaceFor(stamp);
@@ -112,9 +108,7 @@ namespace FindSpaceTests
                 Graphics g = System.Drawing.Graphics.FromImage(b);
                 g.FillRectangle(Brushes.Red, (Rectangle)r);
                 g.Flush();
-
         //        Console.WriteLine(optimiser.GetType().Name + sw.ElapsedMilliseconds / 1000);
-
                 string extension = System.IO.Path.GetExtension(testfilepath);
                 string filepath = testfilepath.Replace(extension, optimiser.GetType().Name + extension);
                 b.Save(filepath);

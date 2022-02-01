@@ -1,4 +1,5 @@
 ﻿using SoupSoftware.FindSpace;
+using SoupSoftware.FindSpace.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace SoupSoftware.WhiteSpace
 {
-    public class searchMatrix
+    public class searchMatrix: ISearchMatrix
     {
 
         public searchMatrix(Bitmap image, WhitespacerfinderSettings settings)
@@ -24,29 +25,19 @@ namespace SoupSoftware.WhiteSpace
 
 
         }
-        public byte[,] mask;
-        public int[,] maskvalsx;
-        public int[,] maskvalsy;
-        public int[,] deepCheck;
-        public int[] colSums;
-        public int[] rowSums;
-        public bool maskCalculated = false;
-        private Bitmap Image;
-        WhitespacerfinderSettings Settings;
-        private byte redMask;
-        private byte greenMask;
-        private byte blueMask;
-        private const byte autoDetectColorMask = 0b11111000;
-
-
-        private Color backColor { get; set; }
-
+        public byte[,] mask { get; private set; }
+        public int[,] maskvalsx { get; private set; }
+        public int[,] maskvalsy { get; private set; }
+        public int[,] deepCheck { get; private set; }
+        public int[] colSums { get; private set; }
+        public int[] rowSums { get; private set; }
+        public bool maskCalculated { get; private set; } = false;
         public void CalculateMask(int stampwidth, int stampheight, Rectangle WorkArea)
         {
             GetBits colorEvaluation;
-            if (backColor==Color.Empty)
+            if (backColor == Color.Empty)
             {
-                
+
                 backColor = GetModalColor();
 
 
@@ -66,9 +57,21 @@ namespace SoupSoftware.WhiteSpace
             }
 
 
-            CalculateXVectors(stampwidth, WorkArea,colorEvaluation);
+            CalculateXVectors(stampwidth, WorkArea, colorEvaluation);
             CalculateYVectors(stampheight, WorkArea);
         }
+
+
+
+        private Bitmap Image;
+        WhitespacerfinderSettings Settings;
+        private byte redMask;
+        private byte greenMask;
+        private byte blueMask;
+        private const byte autoDetectColorMask = 0b11111000;
+
+
+        private Color backColor { get; set; }
 
         //public void UpdateMask(int stampwidth, int stampheight, Rectangle ClearArea)
         //{
@@ -81,6 +84,8 @@ namespace SoupSoftware.WhiteSpace
 
         private Color GetModalColor()
         {
+        
+            
             int depth;
             byte[] buffer;
             GetBitmapData(out depth, out buffer);

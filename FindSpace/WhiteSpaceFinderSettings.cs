@@ -55,9 +55,12 @@ namespace SoupSoftware.FindSpace
 
         public Color Color { get; set; } = Color.White;
 
-       
 
-        public SearchAlgorithm SearchAlgorithm { get; set; } = SearchAlgorithm.Exact;
+
+        public IDeepSearch SearchAlgorithm { get; set; } = new ExactSearch();
+
+
+
         public int Padding { get; set; } = 2;
 
         public iMargin Margins { get; set; } = new ManualMargin(10, 10, 10, 10);
@@ -72,7 +75,11 @@ namespace SoupSoftware.FindSpace
 
     }
 
-    public enum SearchAlgorithm { Exact = 1, Optimised = 2 }
+
+    public interface IDeepSearch
+    {
+        int Search(ISearchMatrix masks, int Left, int Top, int Width, int Height);
+    }
 
 }
 

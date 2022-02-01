@@ -35,5 +35,17 @@ namespace SoupSoftware.FindSpace.Interfaces
         Rectangle GetworkArea(Bitmap image);
     }
 
+    public interface ISearchMatrix {
+
+         byte[,] mask { get;  }
+         int[,] maskvalsx { get;  }
+         int[,] maskvalsy { get;  }
+         int[,] deepCheck { get; }
+         int[] colSums { get; }
+         int[] rowSums { get;  }
+         bool maskCalculated { get;}
+        void CalculateMask(int stampwidth, int stampheight, Rectangle WorkArea);
+
+            }
 }
 

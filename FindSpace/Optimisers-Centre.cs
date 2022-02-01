@@ -21,13 +21,7 @@ namespace SoupSoftware.FindSpace.Optimisers
 
     public class MiddleCentreOptimiser : IOptimiser
     {
-        private Point Ctr;
-        public MiddleCentreOptimiser(Rectangle rect)
-        {
-
-
-        }
-
+       
         public IEnumerable<Point> GetOptimisedPoints(Rectangle rect)
         {
             int x = (rect.Right - rect.Left) / 2;
