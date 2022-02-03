@@ -6,6 +6,7 @@ using SoupSoftware.FindSpace.Optimisers;
 using System.Drawing;
 using SoupSoftware.FindSpace.Interfaces;
 using System.Linq;
+using System.IO;
 
 namespace FindSpaceTests
 {
@@ -22,63 +23,29 @@ namespace FindSpaceTests
 
         }
 
+        public static IEnumerable<object[]> GetTestData() {
+
+            DirectoryInfo dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+            FileInfo[] files = dir.GetFiles("*.bmp");
+            Type ty = typeof(SoupSoftware.FindSpace.Interfaces.IOptimiser);
+      
+            Type[] types = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(s => s.GetTypes())
+            .Where(p => ty.IsAssignableFrom(p) && !p.IsAbstract && !p.IsInterface).ToArray();
+
+            string[] typenames = types.Select(t => t.Name).ToArray();
+
+            string[] paths = files.Where(f => !(typenames.Any(tn => f.Name.Contains(tn)))).Select(res=> res.FullName).ToArray();
+
+
+            return paths.SelectMany(x => types, (x, y) => new object[] { x, y });
+
+        }
+        
+
+
         [DataTestMethod]
-        [DataRow(@"Test1.bmp", typeof(TopLefttOptimiser))]
-        [DataRow(@"Test1.bmp", typeof(TopRighttOptimiser))]
-        [DataRow(@"Test1.bmp", typeof(TopOptimiser))]
-        [DataRow(@"Test1.bmp", typeof(TopCentreOptimiser))]
-        [DataRow(@"Test1.bmp", typeof(MiddleLeftOptimiser))]
-        [DataRow(@"Test1.bmp", typeof(MiddleCentreOptimiser))]
-        [DataRow(@"Test1.bmp", typeof(MiddleRightOptimiser))]
-        [DataRow(@"Test1.bmp", typeof(BottomLeftOptimiser))]
-        [DataRow(@"Test1.bmp", typeof(BottomCentreOptimiser))]
-        [DataRow(@"Test1.bmp", typeof(BottomOptimiser))]
-        [DataRow(@"Test1.bmp", typeof(BottomRightOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopLefttOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopRighttOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopCentreOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(MiddleLeftOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(MiddleCentreOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(MiddleRightOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomLeftOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomCentreOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomRightOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopLefttOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopRighttOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopCentreOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(MiddleLeftOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(MiddleCentreOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(MiddleRightOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomLeftOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomCentreOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomRightOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopLefttOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopRighttOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(TopCentreOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(MiddleLeftOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(MiddleCentreOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(MiddleRightOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomLeftOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomCentreOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomOptimiser))]
-        [DataRow(@"Test2.bmp", typeof(BottomRightOptimiser))]
-        [DataRow(@"Test3.bmp", typeof(TopLefttOptimiser))]
-        [DataRow(@"Test3.bmp", typeof(TopRighttOptimiser))]
-        [DataRow(@"Test3.bmp", typeof(TopOptimiser))]
-        [DataRow(@"Test3.bmp", typeof(TopCentreOptimiser))]
-        [DataRow(@"Test3.bmp", typeof(MiddleLeftOptimiser))]
-        [DataRow(@"Test3.bmp", typeof(MiddleCentreOptimiser))]
-        [DataRow(@"Test3.bmp", typeof(MiddleRightOptimiser))]
-        [DataRow(@"Test3.bmp", typeof(BottomLeftOptimiser))]
-        [DataRow(@"Test3.bmp", typeof(BottomCentreOptimiser))]
-        [DataRow(@"Test3.bmp", typeof(BottomOptimiser))]
-        [DataRow(@"Test3.bmp", typeof(BottomRightOptimiser))]
-     
+        [DynamicData(nameof(GetTestData), DynamicDataSourceType.Method)]
         public void TestMethod(string testfilepath, Type type)
         {
             
@@ -90,13 +57,14 @@ namespace FindSpaceTests
            
                 SoupSoftware.FindSpace.WhitespacerfinderSettings wsf = new SoupSoftware.FindSpace.WhitespacerfinderSettings();
             wsf.Optimiser = optimiser;
+            wsf.AutoDetectBackGroundColor=true;
             wsf.SearchAlgorithm = new SoupSoftware.FindSpace.ExactSearch();
                 Stopwatch sw = new Stopwatch();
             sw.Start();
             SoupSoftware.FindSpace.WhiteSpaceFinder w = new SoupSoftware.FindSpace.WhiteSpaceFinder(b, wsf);
             sw.Stop();
             Trace.WriteLine("Init Image " + sw.ElapsedMilliseconds  +" ms");
-            Rectangle stamp = new Rectangle(0, 0, 60,60);
+            Rectangle stamp = new Rectangle(0, 0, 250,60);
             sw.Reset();
                 sw.Start();
             Rectangle? r = w.FindSpaceFor(stamp);
@@ -112,6 +80,7 @@ namespace FindSpaceTests
                 string extension = System.IO.Path.GetExtension(testfilepath);
                 string filepath = testfilepath.Replace(extension, optimiser.GetType().Name + extension);
                 b.Save(filepath);
+                b.Dispose();
             }
         }
 
