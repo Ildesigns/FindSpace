@@ -64,7 +64,7 @@ namespace FindSpaceTests
             SoupSoftware.FindSpace.WhiteSpaceFinder w = new SoupSoftware.FindSpace.WhiteSpaceFinder(b, wsf);
             sw.Stop();
             Trace.WriteLine("Init Image " + sw.ElapsedMilliseconds  +" ms");
-            Rectangle stamp = new Rectangle(0, 0, 250,60);
+            Rectangle stamp = new Rectangle(0, 0, 60,60);
             sw.Reset();
                 sw.Start();
             Rectangle? r = w.FindSpaceFor(stamp);
