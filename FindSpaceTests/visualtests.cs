@@ -31,7 +31,7 @@ namespace FindSpaceTests
       
             Type[] types = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(s => s.GetTypes())
-            .Where(p => ty.IsAssignableFrom(p) && !p.IsAbstract && !p.IsInterface).ToArray();
+            .Where(p => ty.IsAssignableFrom(p) && !p.IsAbstract && !p.IsInterface && p.GetConstructors().Where(ctor => ctor.GetParameters().Length == 0).ToArray().Length == 1).ToArray();
 
             string[] typenames = types.Select(t => t.Name).ToArray();
 
