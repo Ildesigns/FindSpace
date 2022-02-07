@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace SoupSoftware.WhiteSpace
 {
-    public class searchMatrix: ISearchMatrix
+    public class searchMatrix : ISearchMatrix
     {
 
         public searchMatrix(Bitmap image, WhitespacerfinderSettings settings)
@@ -21,7 +21,7 @@ namespace SoupSoftware.WhiteSpace
             rowSums = new int[image.Width];
             Image = image;
             Settings = settings;
-            
+
 
 
         }
@@ -84,16 +84,16 @@ namespace SoupSoftware.WhiteSpace
 
         private Color GetModalColor()
         {
-        
-            
+
+
             int depth;
             byte[] buffer;
-            GetBitmapData(out depth, out buffer);
+            GetBitmapData(Image, out depth, out buffer);
             int len = buffer.Length / depth;
             int[] RoundCol = new int[len];
-            Parallel.For(0,len, (i) => { 
+            Parallel.For(0, len, (i) => {
                 //todo: write new function below does not work.
-                 RoundCol[i]=GetbitColor(buffer, i*depth);
+                RoundCol[i] = GetbitColor(buffer, i * depth);
             });
 
             int foo = RoundCol.GroupBy(d => d).OrderBy(g => g.Count()).Last().Key;
@@ -128,28 +128,28 @@ namespace SoupSoftware.WhiteSpace
 
             int depth;
             byte[] buffer;
-            GetBitmapData(out depth, out buffer);
+            GetBitmapData(Image, out depth, out buffer);
 
             Parallel.For(WorkArea.Top, WorkArea.Bottom, (int i) =>
             {
-                
+
                 rowSum = CalculateRowSum(stampwidth, WorkArea, i, buffer, depth, width, Settings, colorEvaluation);
                 rowSums[i] = rowSum;
             });
 
         }
 
-        private void GetBitmapData(out int depth, out byte[] buffer)
+        internal static void GetBitmapData(Bitmap image, out int depth, out byte[] buffer)
         {
-            BitmapData data = Image.LockBits(new Rectangle(0, 0, Image.Width, Image.Height), ImageLockMode.ReadWrite, Image.PixelFormat);
+            BitmapData data = image.LockBits(new Rectangle(0, 0, image.Width, image.Height), ImageLockMode.ReadWrite, image.PixelFormat);
             IntPtr ptr = data.Scan0;
             depth = Bitmap.GetPixelFormatSize(data.PixelFormat) / 8;
-            buffer = new byte[data.Stride * Image.Height];
+            buffer = new byte[data.Stride * image.Height];
             System.Runtime.InteropServices.Marshal.Copy(ptr, buffer, 0, buffer.Length);
-            Image.UnlockBits(data);
+            image.UnlockBits(data);
         }
 
-        delegate int  GetBits(byte[] buffer, int x, int y, int width, int depth);
+        delegate int GetBits(byte[] buffer, int x, int y, int width, int depth);
 
         int GetbitvalWhite(byte[] buffer, int x, int y, int width, int depth)
         {
@@ -164,9 +164,9 @@ namespace SoupSoftware.WhiteSpace
             return a;
         }
 
-        int GetbitColor(byte[] buffer, int offset )
+        int GetbitColor(byte[] buffer, int offset)
         {
-            int ColorMask = (buffer[offset + 0] & autoDetectColorMask)<<16 | (buffer[offset + 1] & autoDetectColorMask)<<8 | (buffer[offset + 2] & autoDetectColorMask);
+            int ColorMask = (buffer[offset + 0] & autoDetectColorMask) << 16 | (buffer[offset + 1] & autoDetectColorMask) << 8 | (buffer[offset + 2] & autoDetectColorMask);
             return ColorMask;
         }
 
@@ -181,7 +181,7 @@ namespace SoupSoftware.WhiteSpace
                 byte val;
                 if (!maskCalculated)
                 {
-                  val = (colorEvaluation.Invoke(buffer,x,y,width,depth) > filterVal) ? (byte)1 : (byte)0;
+                    val = (colorEvaluation.Invoke(buffer, x, y, width, depth) > filterVal) ? (byte)1 : (byte)0;
 
                     mask[x, y] = val;
                 }
@@ -209,7 +209,7 @@ namespace SoupSoftware.WhiteSpace
             int colSum;
             Parallel.For(WorkArea.Left, WorkArea.Right, (x) =>
             {
-                
+
 
                 colSum = CalculateColSum(stampheight, WorkArea, x);
                 colSums[x] = colSum;

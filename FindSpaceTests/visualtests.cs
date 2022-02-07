@@ -59,6 +59,7 @@ namespace FindSpaceTests
             wsf.Optimiser = optimiser;
             wsf.AutoDetectBackGroundColor=true;
             wsf.SearchAlgorithm = new SoupSoftware.FindSpace.ExactSearch();
+            wsf.Margins = new SoupSoftware.FindSpace.AutomaticMargin(1, 1, 1, 1);
                 Stopwatch sw = new Stopwatch();
             sw.Start();
             SoupSoftware.FindSpace.WhiteSpaceFinder w = new SoupSoftware.FindSpace.WhiteSpaceFinder(b, wsf);
