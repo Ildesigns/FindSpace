@@ -214,7 +214,7 @@ namespace SoupSoftware.FindSpace
             BitmapData data = Image.LockBits(new Rectangle(0, 0, Image.Width, Image.Height), ImageLockMode.ReadWrite, Image.PixelFormat);
             IntPtr ptr = data.Scan0;
             depth = Bitmap.GetPixelFormatSize(data.PixelFormat) / 8;
-            buffer = new byte[Image.Width * Image.Height];
+            buffer = new byte[data.Stride * Image.Height];
             System.Runtime.InteropServices.Marshal.Copy(ptr,buffer, 0, buffer.Length);
             //RGB[] f =  sRGB.Deserialize<RGB[]>(buffer)
             Image.UnlockBits(data);

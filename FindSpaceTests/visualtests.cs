@@ -59,6 +59,7 @@ namespace FindSpaceTests
                 SoupSoftware.FindSpace.WhitespacerfinderSettings wsf = new SoupSoftware.FindSpace.WhitespacerfinderSettings();
             wsf.Optimiser = optimiser;
             wsf.Brightness = 30;
+           
          
             wsf.backgroundcolor=Color.Empty;
             wsf.Margins = new ManualMargin(10);
