@@ -7,6 +7,7 @@ using System.Drawing;
 using SoupSoftware.FindSpace.Interfaces;
 using System.Linq;
 using System.IO;
+using SoupSoftware.FindSpace;
 
 namespace FindSpaceTests
 {
@@ -31,7 +32,7 @@ namespace FindSpaceTests
       
             Type[] types = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(s => s.GetTypes())
-            .Where(p => ty.IsAssignableFrom(p) && !p.IsAbstract && !p.IsInterface).ToArray();
+            .Where(p => ty.IsAssignableFrom(p) && !p.IsAbstract && !p.IsInterface &&p.GetConstructors().Any(c=>c.GetParameters().Length ==0)).ToArray();
 
             string[] typenames = types.Select(t => t.Name).ToArray();
 
@@ -39,7 +40,7 @@ namespace FindSpaceTests
 
 
             return paths.SelectMany(x => types, (x, y) => new object[] { x, y });
-
+            
         }
         
 
@@ -57,7 +58,11 @@ namespace FindSpaceTests
            
                 SoupSoftware.FindSpace.WhitespacerfinderSettings wsf = new SoupSoftware.FindSpace.WhitespacerfinderSettings();
             wsf.Optimiser = optimiser;
-            wsf.AutoDetectBackGroundColor=true;
+            wsf.Brightness = 30;
+         
+            wsf.backgroundcolor=Color.Empty;
+            wsf.Margins = new ManualMargin(10);
+           // wsf.Brightness = 1;
             wsf.SearchAlgorithm = new SoupSoftware.FindSpace.ExactSearch();
                 Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -85,8 +90,8 @@ namespace FindSpaceTests
         }
 
 
-
-
        
+
+
     }
 }
