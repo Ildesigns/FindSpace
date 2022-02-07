@@ -53,76 +53,7 @@ namespace SoupSoftware.FindSpace
         public int Bottom { get; set; }
     }
 
-    public class AutoDetectMargin : iMargin
-    {
-       
-
-      
-
-        public Rectangle GetworkArea(searchMatrix matrix)
-        {
-            Left = GetMargin(matrix.colSums, direction.minToMax, matrix.rowSums.Length - 1);
-            Right = GetMargin(matrix.colSums, direction.MaxToMin, matrix.rowSums.Length - 1);
-            Top = GetMargin(matrix.rowSums, direction.minToMax, matrix.colSums.Length - 1);
-            Bottom = GetMargin(matrix.rowSums, direction.MaxToMin, matrix.colSums.Length - 1);
-
-
-            return new Rectangle(Left, Top, matrix.colSums.Length - 1 - (Left + Right), matrix.rowSums.Length - 1 - (Top + Bottom));
-        }
-
-        private enum direction {minToMax =1, MaxToMin=-1 }
-
-        private int GetMargin(int[] array, direction direction, int limit)
-        {
-            int start;
-            int end;
-            int step;
-           
-            switch (direction)
-            {
-                case direction.minToMax:
-                    start = 0;
-                    end = array.Length - 1;
-                    step = 1;
-                    break;
-                default:
-                    start = array.Length - 1;
-                    end = 0;
-                    step = -1;
-                    break;
-
-            }
-            int found = start;
-            int x = start;
-            do {
-                if (array[x] != limit)
-                {
-                    found = x;
-                    x = x + step;
-                    x = end;
-                }
-
-
-            } while (x != end);
-
-            return found;
-        }
-
-        
-        public bool AutoExpand { get; private set; } = true;
-
-
-
-        public int Left { get; private set; }
-
-        public int Right { get; private set; }
-
-        public int Top { get; private set; }
-
-        public int Bottom { get; private set; }
-    }
-
-
+  
     public class WhitespacerfinderSettings
     {
 
