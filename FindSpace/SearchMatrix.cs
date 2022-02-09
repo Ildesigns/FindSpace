@@ -146,15 +146,16 @@ namespace SoupSoftware.FindSpace
            //cutoff filter (fine based on sum of components)
             ulong highColRange = ((ulong)Settings.calcHighFilter((int)modalColor, Settings.DetectionRange))<<32;
             ulong lowcolRange = ((ulong)Settings.calcLowFilter((int)modalColor, Settings.DetectionRange)) << 32;
-            
-            //the below filters colors which have close sum of RGBs to the modal color (could be a completly diff color but very close sum)
-            
-            
 
-            ulong[] colorGroupsRefined = colorGroups.Where(g => 
-            (highColRange >= (g.First() & sumMask)) && 
-            (lowcolRange <= (g.First() & sumMask))
-            ).Select(h=> h.First()).ToArray();
+            //the below filters colors which have close sum of RGBs to the modal color (could be a completly diff color but very close sum)
+
+
+
+            ulong[] colorGroupsRefined = colorGroups.Where(g =>
+              (highColRange >= (g.First() & sumMask)) &&
+              (lowcolRange <= (g.First() & sumMask))
+              ).Select(h => h.First()).ToArray();
+
 
             //the below filters colors which have close RGBs i.e. only similar colors.
             ulong[] cols = colorGroupsRefined.Where(x => {
@@ -240,9 +241,9 @@ namespace SoupSoftware.FindSpace
         {
             //gets a color as an int (alpha stripped)
             uint a = //sums
-                (uint)((buffer[offset + 0] ) << 16 | //red
+                (uint)((buffer[offset + 0] )  | //red
                 (buffer[offset + 1] ) << 8 | //green
-                (buffer[offset + 2] ));//blue
+                (buffer[offset + 2] )<<16);//blue
             return a;
         }
 

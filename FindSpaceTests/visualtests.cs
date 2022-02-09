@@ -91,8 +91,56 @@ namespace FindSpaceTests
         }
 
 
-       
+        public static IEnumerable<object[]> GetTestData2()
+        {
+
+            Color[] colors = new Color[]
+            {
+                Color.White,
+                Color.Red,
+                Color.Green,
+                Color.Blue,
+                Color.Purple,
+                Color.Yellow,
+                Color.Beige,
+                Color.Black,
+                Color.AliceBlue,
+                Color.GhostWhite,
+                Color.Goldenrod
+            };
+            return colors.Select(a=> new object[] { a }).AsEnumerable();
+
+        }
+
+
+        [DataTestMethod]
+        [DynamicData(nameof(GetTestData2), DynamicDataSourceType.Method)]
+        public void ColorDetectionTests(Color color)
+        {
+
+            Bitmap b = new Bitmap(1,1);
+
+            Rectangle r = new Rectangle(0, 0, 100, 100);
+           
+              Graphics g = System.Drawing.Graphics.FromImage(b);
+            g.FillRectangle(new  SolidBrush(color),r );
+            g.Flush();
+
+            SoupSoftware.FindSpace.WhitespacerfinderSettings wsf = new SoupSoftware.FindSpace.WhitespacerfinderSettings();
+            wsf.Margins = new ManualMargin(0);
+            wsf.Brightness = 30;
+            wsf.backgroundcolor = Color.Empty;
+            wsf.Margins = new ManualMargin(0);
+
+
+            searchMatrix mask =   new  searchMatrix(b, wsf);
+        PrivateObject obj = new PrivateObject(mask);
+            Color Colorres = (Color)obj.Invoke("GetModalColor");
+           
+            Assert.AreEqual(color.ToArgb()&0x00FFFFFF,Colorres.ToArgb());
+}
+        }
 
 
     }
-}
+
