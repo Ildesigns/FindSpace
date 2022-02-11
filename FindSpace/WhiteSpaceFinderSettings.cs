@@ -63,7 +63,7 @@ namespace SoupSoftware.FindSpace
 
         public int DetectionRange { get { return (int)(brightness) / 2; } }
 
-        public Color backgroundcolor = Color.White;
+        public Color backgroundcolor = Color.Empty;
         public Color backGroundColor { 
             get { return backgroundcolor; }
             set {

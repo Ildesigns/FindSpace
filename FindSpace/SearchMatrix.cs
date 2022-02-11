@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace SoupSoftware.FindSpace
 {
-  
+
     [StructLayout(LayoutKind.Explicit)]
     public struct sRGB
     {
@@ -36,7 +36,7 @@ namespace SoupSoftware.FindSpace
         [FieldOffset(0)]
         public Int64 Value;
         [FieldOffset(0)]
-        public  Int32 Sum;
+        public Int32 Sum;
         [FieldOffset(4)]
         public Int32 asRGB;
         [FieldOffset(5)]
@@ -57,7 +57,7 @@ namespace SoupSoftware.FindSpace
         }
 
         [FieldOffset(0)]
-        public int  Value;
+        public int Value;
         [FieldOffset(1)]
         public byte R;
         [FieldOffset(2)]
@@ -69,7 +69,7 @@ namespace SoupSoftware.FindSpace
 
 
 
-    public class searchMatrix: ISearchMatrix
+    public class searchMatrix : ISearchMatrix
     {
 
         public searchMatrix(Bitmap image, WhitespacerfinderSettings settings)
@@ -80,8 +80,10 @@ namespace SoupSoftware.FindSpace
             colSums = new int[image.Height];
             rowSums = new int[image.Width];
             Image = image;
+            Width = Image.Width;
+            Height = Image.Height;
             Settings = settings;
-         
+
         }
         public byte[,] mask { get; private set; }
         public int[,] maskvalsx { get; private set; }
@@ -99,63 +101,66 @@ namespace SoupSoftware.FindSpace
 
 
             }
-            
 
-            CalculateXVectors(stampwidth, WorkArea);
-            CalculateYVectors(stampheight, WorkArea);
+            UpdateMask(stampwidth, stampheight, WorkArea);
+
+            maskCalculated = true;
         }
 
 
 
         private Bitmap Image;
+        public int Width;
+        public int Height;
+
         WhitespacerfinderSettings Settings;
-       
+
         private Color backColor { get; set; }
 
-        //public void UpdateMask(int stampwidth, int stampheight, Rectangle ClearArea)
-        //{
+        public void UpdateMask(int stampwidth, int stampheight, Rectangle WorkArea)
+        {
+            CalculateXVectors(stampwidth, WorkArea);
+            CalculateYVectors(stampheight, WorkArea);
 
-
-        //    CalculateXVectors(stampwidth, WorkArea);
-        //    CalculateYVectors(stampheight, WorkArea);
-        //}
-
+            //ApplyEdits();
+        }
 
         private Color GetModalColor()
         {
             const ulong sumMask = ulong.MaxValue - UInt32.MaxValue;
-            const ulong colorMask = UInt32.MaxValue; 
-            const ulong coarseFilterMask = 0xF9F9F9;
-           int depth;
+            const ulong colorMask = UInt32.MaxValue;
+            const ulong coarseFilterMask = 0xF7F7F7;
+            int depth;
             byte[] buffer;
             GetBitmapData(out depth, out buffer);
             int len = buffer.Length / depth;
             ulong[] RoundCol = new ulong[len];
-            
-            Parallel.For(0,len, (i) => { 
+
+            Parallel.For(0, len, (i) => {
                 //todo: write new function below does not work.
-                 RoundCol[i]= GetbitvalColorlong(buffer, i*depth);
-              
+                RoundCol[i] = GetbitvalColorlong(buffer, i * depth);
+
             });
 
 
-            
-             IEnumerable<IGrouping<ulong,ulong>> colorGroups = RoundCol.GroupBy(d => d & colorMask); //group based on color as int
+
+            IEnumerable<IGrouping<ulong, ulong>> colorGroups = RoundCol.GroupBy(d => d & colorMask); //group based on color as int
             ulong modalColor = colorGroups.OrderBy(g => g.Count()).Last().First(); //most occouring Color
+
             int maskheight = (int)((modalColor & sumMask) >> 32);
-           //cutoff filter (fine based on sum of components)
-            ulong highColRange = ((ulong)Settings.calcHighFilter((int)modalColor, Settings.DetectionRange))<<32;
+            //cutoff filter (fine based on sum of components)
+            ulong highColRange = ((ulong)Settings.calcHighFilter((int)modalColor, Settings.DetectionRange)) << 32;
             ulong lowcolRange = ((ulong)Settings.calcLowFilter((int)modalColor, Settings.DetectionRange)) << 32;
 
+            //if ((((modalColor & sumMask) >> 32) > (ulong)(765 - Settings.Brightness)))
+            //    return Color.White;
+
+
             //the below filters colors which have close sum of RGBs to the modal color (could be a completly diff color but very close sum)
-
-
-
             ulong[] colorGroupsRefined = colorGroups.Where(g =>
-              (highColRange >= (g.First() & sumMask)) &&
-              (lowcolRange <= (g.First() & sumMask))
-              ).Select(h => h.First()).ToArray();
-
+            (highColRange >= (g.First() & sumMask)) &&
+            (lowcolRange <= (g.First() & sumMask))
+            ).Select(h => h.First()).ToArray();
 
             //the below filters colors which have close RGBs i.e. only similar colors.
             ulong[] cols = colorGroupsRefined.Where(x => {
@@ -163,10 +168,7 @@ namespace SoupSoftware.FindSpace
                 return coly == (coarseFilterMask & modalColor);
             }).ToArray();
 
-
-
-
-            int meanCol = (int)cols.Select(x=>(int)( x&colorMask)).Average();
+            int meanCol = (int)cols.Select(x => (int)(x & colorMask)).Average();
 
             Color modalCol = Color.FromArgb(meanCol);
             return modalCol;
@@ -186,7 +188,6 @@ namespace SoupSoftware.FindSpace
             while (true);
         }
 
-
         private void CalculateXVectors(int stampwidth, Rectangle WorkArea)
         {
 
@@ -203,9 +204,8 @@ namespace SoupSoftware.FindSpace
 
             Parallel.For(WorkArea.Top, WorkArea.Bottom, (int i) =>
             {
-                
-                rowSum = CalculateRowSum(stampwidth, WorkArea, i, buffer, depth, width, Settings);
-                rowSums[i] = rowSum;
+                rowSums[i] = CalculateRowSum(i, buffer, depth, width, Settings);
+                CalculateRowRuns(i, stampwidth);
             });
 
         }
@@ -216,16 +216,16 @@ namespace SoupSoftware.FindSpace
             IntPtr ptr = data.Scan0;
             depth = Bitmap.GetPixelFormatSize(data.PixelFormat) / 8;
             buffer = new byte[data.Stride * Image.Height];
-            System.Runtime.InteropServices.Marshal.Copy(ptr,buffer, 0, buffer.Length);
+            System.Runtime.InteropServices.Marshal.Copy(ptr, buffer, 0, buffer.Length);
             //RGB[] f =  sRGB.Deserialize<RGB[]>(buffer)
             Image.UnlockBits(data);
         }
 
-    
+
         uint Getbitval(byte[] buffer, int offset)
         {
-            
-            uint a = (uint)( buffer[offset + 0] + buffer[offset + 1] + buffer[offset + 2]);
+
+            uint a = (uint)(buffer[offset + 0] + buffer[offset + 1] + buffer[offset + 2]);
             return a;
         }
         ulong GetbitvalColorlong(byte[] buffer, int offset)
@@ -241,40 +241,43 @@ namespace SoupSoftware.FindSpace
         {
             //gets a color as an int (alpha stripped)
             uint a = //sums
-                (uint)((buffer[offset + 0] )  | //red
-                (buffer[offset + 1] ) << 8 | //green
-                (buffer[offset + 2] )<<16);//blue
+                (uint)((buffer[offset + 0])| //red
+                (buffer[offset + 1]) << 8 | //green
+                (buffer[offset + 2]) << 16);//blue
             return a;
         }
 
+        private void CalculateRowRuns(int y, int stampwidth)
+        {
+            int runval = 0;
+            for (int x = Width - 1; x >= 0; x--)
+            {
+                int val = mask[x, y];
+                //sum the number of non 0 cells in a row store in 'x' matrix
+                runval = val == 0 ? 0 : val + runval;
+                int saveval = (runval < stampwidth) ? 0 : runval;
+                maskvalsx[x, y] = saveval;
+            }
+        }
 
-
-        private int CalculateRowSum(int stampwidth, Rectangle WorkArea, int y, byte[] buffer, int depth, int width, WhitespacerfinderSettings Settings)
+        private int CalculateRowSum(int y, byte[] buffer, int depth, int width, WhitespacerfinderSettings Settings)
         {
             int rowSum = 0;
-            int runval = 0;
-              for (int x = WorkArea.Right; x >= WorkArea.Left; x--)
+            for (int x = Width - 1; x >= 0; x--)
             {
                 uint col = Getbitval(buffer, (y * width + x) * depth);
                 byte val;
                 if (!maskCalculated)
                 {
-                  val = (Settings.filterHigh >= col && col >= Settings.filterLow) ? (byte)1 : (byte)0;
-
+                    val = (Settings.filterHigh >= col && col >= Settings.filterLow) ? (byte)1 : (byte)0;
                     mask[x, y] = val;
                 }
                 else
                 {
                     val = mask[x, y];
                 }
-                //also whilst we are iterating sum the number of non 0 cells in a row store in 'x' matrix
-                runval = val == 0 ? 0 : val + runval;
-                int saveval = (runval < stampwidth) ? 0 : runval;
-                rowSum = (1 - val) + rowSum;
-                maskvalsx[x, y] = saveval;
+                rowSum += (1 - val);
             }
-
-
             return rowSum;
         }
 
@@ -285,32 +288,35 @@ namespace SoupSoftware.FindSpace
             //now reiterare as sum the number of non 0 cells in a column store in 'y' matrix, we sum from bottom up.
 
             int colSum;
-            Parallel.For(WorkArea.Left, WorkArea.Right, (x) =>
-            {
-                
-
-                colSum = CalculateColSum(stampheight, WorkArea, x);
-                colSums[x] = colSum;
+            Parallel.For(0, Width, (x) => {
+                colSums[x] = CalculateColSum(x, WorkArea);
+                CalculateColRuns(x, stampheight);
             });
-
 
 
         }
 
-        private int CalculateColSum(int stampheight, Rectangle WorkArea, int x)
+        private void CalculateColRuns(int x, int stampheight)
         {
-            int colSum = 0;
+
             int runval = 0;
-            for (int y = WorkArea.Bottom; y >= WorkArea.Top; y--)
+            for (int y = Height - 1; y >= 0; y--)
             {
                 int val = mask[x, y];
                 runval = val == 0 ? 0 : val + runval;
-                colSum = (1 - val) + colSum;
                 int saveval = (runval < stampheight) ? 0 : runval;
                 maskvalsy[x, y] = saveval;
             }
-            runval = 0;
-            return colSum;
+
+        }
+
+        private int CalculateColSum(int x, Rectangle WorkArea)
+        {
+            int sum = 0;
+            for (int y = WorkArea.Bottom; y >= WorkArea.Top; y--)
+                sum += (1 - mask[x, y]);
+
+            return sum;
         }
 
 
