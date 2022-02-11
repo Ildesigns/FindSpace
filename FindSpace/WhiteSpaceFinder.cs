@@ -1,4 +1,4 @@
-﻿using SoupSoftware.WhiteSpace;
+﻿using SoupSoftware.FindSpace;
 using SoupSoftware.FindSpace.Interfaces;
 using System;
 using System.Drawing;
@@ -11,72 +11,7 @@ namespace SoupSoftware.FindSpace
 
 
   
-    public class ExactSearch : IDeepSearch
-    {
-        public int Search(ISearchMatrix masks,int Left, int Top, int Width, int Height)
-        {
-            
-            {
-
-                //counts how many zeros in a given sub array.
-
-                int res = 0;
-                try
-                {
-                    for (int a = Left; a <= Left + Width; a++)
-                    {
-                        if (masks.maskvalsy[a, Top] < Height)
-                        {
-                            for (int b = Top; b <= Top + Height; b++)
-                            {
-                                if (masks.mask[a, b] == 0)
-                                {
-                                    res++;
-                                }
-                            }
-
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-
-
-                }
-
-
-                return res;
-            }
-        }
-    }
-
-    class OptimisedSearch : IDeepSearch
-    {
-        public int Search(ISearchMatrix masks, int Left, int Top, int Width, int Height)
-        {
-
-            //counts how many zeros in a given sub array.
-
-            int res = 0;
-            try
-            {
-                for (int a = Left; a <= Left + Width; a++)
-                {
-                    if (masks.maskvalsy[a, Top] < Height) { res++; }
-                }
-            }
-            catch (Exception)
-            {
-
-
-            }
-
-
-            return res;
-        }
-
-    }
-
+   
 
     public class WhiteSpaceFinder
     {
@@ -90,7 +25,7 @@ namespace SoupSoftware.FindSpace
         private void init(Bitmap image)
         {
             masks = new searchMatrix(image, this.Settings);
-            WorkArea = Settings.Margins.GetworkArea(image);
+            WorkArea = Settings.Margins.GetworkArea(masks);
 
         }
 
@@ -113,8 +48,7 @@ namespace SoupSoftware.FindSpace
             init(image);
         }
         protected WhitespacerfinderSettings Settings;
-
-
+        private int forgiveness;
 
         public Rectangle? FindSpaceAt(Rectangle stamp, Point pt)
         {

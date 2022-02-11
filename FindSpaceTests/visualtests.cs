@@ -7,6 +7,7 @@ using System.Drawing;
 using SoupSoftware.FindSpace.Interfaces;
 using System.Linq;
 using System.IO;
+using SoupSoftware.FindSpace;
 
 namespace FindSpaceTests
 {
@@ -31,7 +32,8 @@ namespace FindSpaceTests
       
             Type[] types = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(s => s.GetTypes())
-            .Where(p => ty.IsAssignableFrom(p) && !p.IsAbstract && !p.IsInterface && p.GetConstructors().Where(ctor => ctor.GetParameters().Length == 0).ToArray().Length == 1).ToArray();
+            .Where(p => ty.IsAssignableFrom(p) && !p.IsAbstract && !p.IsInterface &&p.GetConstructors().Any(c=>c.GetParameters().Length ==0)).ToArray();
+
 
             string[] typenames = types.Select(t => t.Name).ToArray();
 
@@ -39,7 +41,7 @@ namespace FindSpaceTests
 
 
             return paths.SelectMany(x => types, (x, y) => new object[] { x, y });
-
+            
         }
         
 
@@ -57,7 +59,12 @@ namespace FindSpaceTests
            
                 SoupSoftware.FindSpace.WhitespacerfinderSettings wsf = new SoupSoftware.FindSpace.WhitespacerfinderSettings();
             wsf.Optimiser = optimiser;
-            wsf.AutoDetectBackGroundColor=true;
+            wsf.Brightness = 30;
+           
+         
+            wsf.backgroundcolor=Color.Empty;
+            wsf.Margins = new ManualMargin(10);
+           // wsf.Brightness = 1;
             wsf.SearchAlgorithm = new SoupSoftware.FindSpace.ExactSearch();
                 Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -85,8 +92,56 @@ namespace FindSpaceTests
         }
 
 
+        public static IEnumerable<object[]> GetTestData2()
+        {
+
+            Color[] colors = new Color[]
+            {
+                Color.White,
+                Color.Red,
+                Color.Green,
+                Color.Blue,
+                Color.Purple,
+                Color.Yellow,
+                Color.Beige,
+                Color.Black,
+                Color.AliceBlue,
+                Color.GhostWhite,
+                Color.Goldenrod
+            };
+            return colors.Select(a=> new object[] { a }).AsEnumerable();
+
+        }
 
 
-       
-    }
+        [DataTestMethod]
+        [DynamicData(nameof(GetTestData2), DynamicDataSourceType.Method)]
+        public void ColorDetectionTests(Color color)
+        {
+
+            Bitmap b = new Bitmap(1,1);
+
+            Rectangle r = new Rectangle(0, 0, 100, 100);
+           
+              Graphics g = System.Drawing.Graphics.FromImage(b);
+            g.FillRectangle(new  SolidBrush(color),r );
+            g.Flush();
+
+            SoupSoftware.FindSpace.WhitespacerfinderSettings wsf = new SoupSoftware.FindSpace.WhitespacerfinderSettings();
+            wsf.Margins = new ManualMargin(0);
+            wsf.Brightness = 30;
+            wsf.backgroundcolor = Color.Empty;
+            wsf.Margins = new ManualMargin(0);
+
+
+            searchMatrix mask =   new  searchMatrix(b, wsf);
+        PrivateObject obj = new PrivateObject(mask);
+            Color Colorres = (Color)obj.Invoke("GetModalColor");
+           
+            Assert.AreEqual(color.ToArgb()&0x00FFFFFF,Colorres.ToArgb());
 }
+        }
+
+
+    }
+
