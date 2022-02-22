@@ -1,34 +1,36 @@
 ﻿using SoupSoftware.FindSpace.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 
 namespace SoupSoftware.FindSpace.Optimisers
 {
 
-
     public abstract class LinearPointOptimiser : IOptimiser
-
     {
 
         protected abstract ICoordinateSorter XAxisResolver { get; }
 
         protected abstract ICoordinateSorter YAxisResolver { get; }
+
+        public abstract IPointGenerator PointGenerator { get; }
+
         public IEnumerable<Point> GetOptimisedPoints(Rectangle rect)
         {
-            foreach (Point p in pointGenerator.GetOptimisedPoints(
+            foreach (Point p in PointGenerator.GetOptimisedPoints(
                  XAxisResolver.GetOptimisedPositions(rect.Left, rect.Right),
                   YAxisResolver.GetOptimisedPositions(rect.Top, rect.Bottom)))
             {
                 yield return p;
-//#if (DEBUG)
-//                Trace.TraceInformation(p.X + "," + p.Y);
-//#endif
             }
         }
-        public abstract IPointGenerator pointGenerator { get; }
+
+        public Point GetOptimalPoint(Rectangle rect)
+        {
+            return PointGenerator.GetOptimisedPoints(XAxisResolver.GetOptimisedPositions(rect.Left, rect.Right),
+                  YAxisResolver.GetOptimisedPositions(rect.Top, rect.Bottom)).First();
+        }
 
     }
 
@@ -41,9 +43,13 @@ namespace SoupSoftware.FindSpace.Optimisers
         public TargetOptimiser(System.Drawing.Point Target)
         {
             target = Target;
-            pointgenerator = new circularPointGenerator(target);
+            pointgenerator = new CircularPointGenerator(target);
         }
 
+        public Point GetOptimalPoint(Rectangle rect)
+        {
+            return target;
+        }
 
         public IEnumerable<Point> GetOptimisedPoints(Rectangle rect)
         {
@@ -59,9 +65,9 @@ namespace SoupSoftware.FindSpace.Optimisers
         public IEnumerable<Point> GetOptimisedPoints(IEnumerable<int> xcoords, IEnumerable<int> ycoords)
         {
 
-            foreach (int y in ycoords)
+            foreach (int x in xcoords)
             {
-                foreach (int x in xcoords)
+                foreach (int y in ycoords)
                 {
                     yield return new Point(x, y);
                 }
@@ -97,7 +103,7 @@ namespace SoupSoftware.FindSpace.Optimisers
                 do
                 {
 
-                   // Trace.TraceInformation(string.Format("{0},{1}", new string[] { x.ToString(), y.ToString() }));
+                    // Trace.TraceInformation(string.Format("{0},{1}", new string[] { x.ToString(), y.ToString() }));
                     yield return new Point(x, y);
                     x = x - xStep;
                     y = y + yStep;
@@ -136,9 +142,9 @@ namespace SoupSoftware.FindSpace.Optimisers
         public IEnumerable<Point> GetOptimisedPoints(IEnumerable<int> xcoords, IEnumerable<int> ycoords)
         {
 
-            foreach (int x in xcoords)
+            foreach (int y in ycoords)
             {
-                foreach (int y in ycoords)
+                foreach (int x in xcoords)
                 {
                     yield return new Point(x, y);
                 }
@@ -149,23 +155,19 @@ namespace SoupSoftware.FindSpace.Optimisers
     }
 
 
-    public class circularPointGenerator : IPointGenerator
+    public class CircularPointGenerator : IPointGenerator
     {
 
 
-        Point target;
-        public circularPointGenerator(Point Target)
+        Point Target;
+        public CircularPointGenerator(Point target)
         {
-            target = Target;
+            Target = target;
         }
-
-
 
         public IEnumerable<Point> GetOptimisedPoints(IEnumerable<int> xcoords, IEnumerable<int> ycoords)
         {
-
-
-            var pts = xcoords.SelectMany(x => ycoords.Select(y => new Point(x, y))).Select(r => new Tuple<double, double, Point>(r.DistanceTo(target), r.absAngle(target), r)).AsQueryable();
+            var pts = xcoords.SelectMany(x => ycoords.Select(y => new Point(x, y))).Select(r => new Tuple<double, double, Point>(r.DistanceTo(Target), r.AbsAngle(Target), r)).AsQueryable();
 
             foreach (Tuple<Double, Double, Point> pt in pts.OrderBy(q => q.Item1).ThenBy(r => r.Item2))
             {
@@ -186,12 +188,11 @@ public static class GeoLibrary
     }
 
 
-    public static double absAngle(this Point to, Point from)
+    public static double AbsAngle(this Point to, Point from)
     {
 
         double dx = to.X - from.X;
         double dy = to.Y - from.Y;
-
 
         return Math.Atan2(dy, dx);
     }

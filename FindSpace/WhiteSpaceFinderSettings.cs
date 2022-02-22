@@ -1,14 +1,11 @@
-﻿using SoupSoftware.FindSpace;
-using SoupSoftware.FindSpace.Interfaces;
+﻿using SoupSoftware.FindSpace.Interfaces;
 using SoupSoftware.FindSpace.Optimisers;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 
 namespace SoupSoftware.FindSpace
 {
-
     public class AutomaticMargin : IAutoMargin
     {
         public int Left { get; set; }
@@ -96,17 +93,39 @@ namespace SoupSoftware.FindSpace
             Resized = true;
         }
 
-    }
+        public void FromRect(Rectangle rect)
+        {
+            Left = rect.Left;
+            Right = rect.Right;
+            Top = rect.Top;
+            Bottom = rect.Bottom;
+        }
 
+
+    }
 
     public class ManualMargin : IMargin
     {
+        public bool AutoExpand { get; set; } = true;
+        public int Left { get; set; }
+        public int Right { get; set; }
+        public int Top { get; set; }
+        public int Bottom { get; set; }
+
         public ManualMargin(int left, int right, int top, int bottom)
         {
             Left = left;
             Right = right;
             Top = top;
             Bottom = bottom;
+        }
+
+        public ManualMargin(int size)
+        {
+            Left = size;
+            Right = size;
+            Top = size;
+            Bottom = size;
         }
 
         public Rectangle GetWorkArea(SearchMatrix masks)
@@ -117,30 +136,27 @@ namespace SoupSoftware.FindSpace
                 throw new IndexOutOfRangeException("The margins are larger than the image");
             }
 
-            return new Rectangle(Left, Top, masks.Mask.GetUpperBound(0)  - (Left + Right), masks.Mask.GetUpperBound(1)  - (Top + Bottom));
+            return new Rectangle(Left, Top, masks.Mask.GetUpperBound(0) - (Left + Right), masks.Mask.GetUpperBound(1) - (Top + Bottom));
         }
 
-
-        public bool AutoExpand { get; set; } = true;
-
-       
-
-        public int Left { get; set; }
-
-        public int Right { get; set; }
-
-        public int Top { get; set; }
-
-        public int Bottom { get; set; }
+        public void FromRect(Rectangle rect)
+        {
+            Left = rect.Left;
+            Right = rect.Right;
+            Top = rect.Top;
+            Bottom = rect.Bottom;
+        }
     }
 
 
-    public class WhitespacefinderSettings
+    public class WhitespaceFinderSettings
     {
 
         //this value is used to determine if a pixel is empty or not. Future tweak to find average non black pixel and use the color of this
         private int brightness = 10;
         public int Brightness { get { return brightness; } set { brightness = value; recalcMask(); } }
+
+        public int DetectionRange { get { return brightness / 2; } }
 
         public Color backgroundcolor = Color.Empty;
         public Color backGroundColor
@@ -210,24 +226,27 @@ namespace SoupSoftware.FindSpace
             return fl;
         }
 
-        public int DetectionRange { get { return brightness / 2; } }
-
         public int filterLow { get; private set; } = 755;
         public int filterHigh { get; private set; } = 765;
 
+
+
+
         public IDeepSearch SearchAlgorithm { get; set; } = new ExactSearch();
-
-
 
         public int Padding { get; set; } = 2;
 
         public IMargin Margins { get; set; } = new ManualMargin(10, 10, 10, 10);
 
-
-        public bool AutoRotate { get; set; }
+        public bool AutoRotate { get; set; } = true;
 
         public int CutOffVal { get; } = 3 * byte.MaxValue;
 
+        // Sum of weights should be 1.0f
+        public float GroupingWeight { get; set; } = 0.5f;
+        public float DistanceWeight { get; set; } = 0.5f;
+
+        public ushort BailOnExact { get; set; } = 5;
 
         public IOptimiser Optimiser { get; set; } = new BottomRightOptimiser();
 
@@ -236,7 +255,7 @@ namespace SoupSoftware.FindSpace
 
     public interface IDeepSearch
     {
-        int Search(ISearchMatrix masks, int Left, int Top, int Width, int Height);
+        int Search(SearchMatrix masks, int Left, int Top, int Width, int Height);
     }
 
 }

@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -80,10 +79,10 @@ namespace SoupSoftware.FindSpace
         public int Width { get; private set; }
         public int Height { get; private set; }
 
-        public readonly WhitespacefinderSettings Settings;
+        public readonly WhitespaceFinderSettings Settings;
         public List<Rectangle> Stamps = new List<Rectangle>();
 
-        public SearchMatrix(Bitmap image, WhitespacefinderSettings settings)
+        public SearchMatrix(Bitmap image, WhitespaceFinderSettings settings)
         {
             Image = image;
             Settings = settings;

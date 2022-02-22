@@ -9,6 +9,7 @@ namespace SoupSoftware.FindSpace.Interfaces
 
         IEnumerable<Point> GetOptimisedPoints(Rectangle rect);
 
+        Point GetOptimalPoint(Rectangle rect);
     }
 
     public interface ICoordinateSorter
@@ -31,6 +32,7 @@ namespace SoupSoftware.FindSpace.Interfaces
         int Top { get; }
         int Bottom { get; }
         Rectangle GetWorkArea(SearchMatrix masks);
+        void FromRect(Rectangle rect);
     }
 
     public interface IAutoMargin : IMargin
@@ -52,11 +54,6 @@ namespace SoupSoftware.FindSpace.Interfaces
         void CalculateMask();
         void UpdateMask(int stampwidth, int stampheight, Rectangle WorkArea);
 
-    }
-
-    public interface IDeepSearch
-    {
-        int Search(SearchMatrix masks, int Left, int Top, int Width, int Height);
     }
 }
 
