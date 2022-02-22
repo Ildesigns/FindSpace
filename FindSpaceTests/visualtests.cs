@@ -35,13 +35,14 @@ namespace FindSpaceTests
             .SelectMany(s => s.GetTypes())
             .Where(p => ty.IsAssignableFrom(p) && !p.IsAbstract && !p.IsInterface && p.GetConstructors().Any(c => c.GetParameters().Length == 0)).ToArray();
 
+
             string[] typenames = types.Select(t => t.Name).ToArray();
 
             string[] paths = files.Where(f => !(typenames.Any(tn => f.Name.Contains(tn)))).Select(res => res.FullName).ToArray();
 
 
             return paths.SelectMany(x => types, (x, y) => new object[] { x, y });
-
+            
         }
 
 
@@ -90,8 +91,6 @@ namespace FindSpaceTests
                 b.Dispose();
             }
         }
-
-
         public static IEnumerable<object[]> GetTestData2()
         {
 

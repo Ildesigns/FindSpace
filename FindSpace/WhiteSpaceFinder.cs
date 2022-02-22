@@ -1,6 +1,7 @@
 ﻿using SoupSoftware.FindSpace;
 using SoupSoftware.FindSpace.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;

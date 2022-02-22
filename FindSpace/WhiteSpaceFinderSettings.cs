@@ -123,6 +123,7 @@ namespace SoupSoftware.FindSpace
 
         public bool AutoExpand { get; set; } = true;
 
+       
 
         public int Left { get; set; }
 
