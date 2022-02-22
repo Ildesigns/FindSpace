@@ -1,6 +1,7 @@
-﻿using SoupSoftware.WhiteSpace;
+﻿using SoupSoftware.FindSpace;
 using SoupSoftware.FindSpace.Interfaces;
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
@@ -8,89 +9,19 @@ using WhitSpace.Results;
 
 namespace SoupSoftware.FindSpace
 {
-
-
-  
-    public class ExactSearch : IDeepSearch
-    {
-        public int Search(ISearchMatrix masks,int Left, int Top, int Width, int Height)
-        {
-            
-            {
-
-                //counts how many zeros in a given sub array.
-
-                int res = 0;
-                try
-                {
-                    for (int a = Left; a <= Left + Width; a++)
-                    {
-                        if (masks.maskvalsy[a, Top] < Height)
-                        {
-                            for (int b = Top; b <= Top + Height; b++)
-                            {
-                                if (masks.mask[a, b] == 0)
-                                {
-                                    res++;
-                                }
-                            }
-
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-
-
-                }
-
-
-                return res;
-            }
-        }
-    }
-
-    class OptimisedSearch : IDeepSearch
-    {
-        public int Search(ISearchMatrix masks, int Left, int Top, int Width, int Height)
-        {
-
-            //counts how many zeros in a given sub array.
-
-            int res = 0;
-            try
-            {
-                for (int a = Left; a <= Left + Width; a++)
-                {
-                    if (masks.maskvalsy[a, Top] < Height) { res++; }
-                }
-            }
-            catch (Exception)
-            {
-
-
-            }
-
-
-            return res;
-        }
-
-    }
-
-
     public class WhiteSpaceFinder
     {
 
         private readonly Bitmap image;
-        private searchMatrix masks;
+        private SearchMatrix masks;
 
         private Rectangle WorkArea;
 
 
         private void init(Bitmap image)
         {
-            masks = new searchMatrix(image, this.Settings);
-            WorkArea = Settings.Margins.GetworkArea(image);
+            masks = new SearchMatrix(image, this.Settings);
+            WorkArea = Settings.Margins.GetWorkArea(masks);
 
         }
 
@@ -103,26 +34,24 @@ namespace SoupSoftware.FindSpace
                 image = newBmp.Clone(new Rectangle(0, 0, newBmp.Width, newBmp.Height), PixelFormat.Format24bppRgb);
             }
 
-            Settings = new WhitespacerfinderSettings();
+            Settings = new WhitespacefinderSettings();
             init(image);
         }
-        public WhiteSpaceFinder(Bitmap Image, WhitespacerfinderSettings settings)
+        public WhiteSpaceFinder(Bitmap Image, WhitespacefinderSettings settings)
         {
             image = Image;
             Settings = settings;
             init(image);
         }
-        protected WhitespacerfinderSettings Settings;
+        protected WhitespacefinderSettings Settings;
 
-
-
-        public Rectangle? FindSpaceAt(Rectangle stamp, Point pt)
+        public Rectangle FindSpaceAt(Rectangle stamp, Point pt)
         {
             this.Settings.Optimiser = new Optimisers.TargetOptimiser(pt);
             return FindSpaceFor(stamp);
         }
 
-        public Rectangle? FindSpaceFor(Rectangle stamp)
+        public Rectangle FindSpaceFor(Rectangle stamp)
         {
             if ((WorkArea.Height - (2 * Settings.Padding + stamp.Height) < 0) ||
               (WorkArea.Width - (2 * Settings.Padding + stamp.Width) < 0)
@@ -134,78 +63,29 @@ namespace SoupSoftware.FindSpace
             int stampwidth = stamp.Width + 2 * Settings.Padding;
             int stampheight = stamp.Height + 2 * Settings.Padding;
 
+            // subtract stamp width and height to keep the search restricted to the top left pxel of the stamp (avoids fits past the bounds of the image)
             Rectangle TopLeftBiasedScanArea = new Rectangle(WorkArea.Left, WorkArea.Top, WorkArea.Width - stampwidth, WorkArea.Height - stampheight);
-            masks.CalculateMask(stampwidth, stampheight, WorkArea);
-            FindResults findReturn;
-            FindResults findReturn90 = new FindResults(image.Width, image.Height, TopLeftBiasedScanArea);
+            masks.UpdateMask(stampwidth, stampheight, WorkArea);
 
-
-
-            if (Settings.Margins.AutoExpand)
+            if (Settings.Margins is IAutoMargin)
             {
-                //this keeps the allocated space for the placement close to the contents.
-                TopLeftBiasedScanArea = RefineScanArea(masks,  TopLeftBiasedScanArea);
+                WorkArea = Settings.Margins.GetWorkArea(masks);
+                masks.UpdateMask(stampwidth, stampheight, WorkArea);
+                TopLeftBiasedScanArea = new Rectangle(WorkArea.Left, WorkArea.Top, WorkArea.Width - stampwidth, WorkArea.Height - stampheight);
+                //Trace.WriteLine($"Margins: L={Settings.Margins.Left}, T={Settings.Margins.Top}, R={Settings.Margins.Right}, B={Settings.Margins.Bottom}");
             }
 
-            findReturn = FindLocations(stampwidth, stampheight, masks, TopLeftBiasedScanArea);
+            FindResults findReturn = FindLocations(stampwidth, stampheight, masks, TopLeftBiasedScanArea);
+            FindResults findReturn90 = new FindResults(image.Width, image.Height, TopLeftBiasedScanArea);
 
             if (Settings.AutoRotate && !findReturn.hasExactMatches() && stampheight != stampwidth)
             {
                 findReturn90 = FindLocations(stampheight, stampwidth, masks, TopLeftBiasedScanArea);
-
             }
             return SelectBestArea(stampwidth, stampheight, TopLeftBiasedScanArea, findReturn, findReturn90);
         }
-
-        private static Rectangle RefineScanArea(searchMatrix searchMatrix, Rectangle ScanArea)
-        {
-            //optimise the size of the grid/
-
-            int newLeft = ScanArea.Left;
-            for (int x = ScanArea.Left; x <= ScanArea.Right; x++)
-            {
-                if (searchMatrix.colSums[x] != 0)
-                {
-                    newLeft = Math.Max(ScanArea.Left, x);
-                    break;
-                }
-            }
-
-            int newTop = ScanArea.Top;
-            for (int y = ScanArea.Top; y <= ScanArea.Bottom; y++)
-            {
-                if (searchMatrix.rowSums[y] != 0)
-                {
-                    newTop = Math.Max(ScanArea.Top, y);
-                    break;
-                }
-            }
-
-
-            int newRight = ScanArea.Right;
-            for (int x = ScanArea.Right; x >= ScanArea.Left; x--)
-            {
-                if (searchMatrix.colSums[x] != 0)
-                {
-                    newRight = Math.Min(ScanArea.Right, x);
-                    break;
-                }
-            }
-
-            int newBottom = ScanArea.Bottom;
-            for (int y = ScanArea.Bottom; y >= ScanArea.Top; y--)
-            {
-                if (searchMatrix.rowSums[y] != 0)
-                {
-                    newBottom = Math.Min(ScanArea.Bottom, y);
-                    break;
-                }
-            }
-            ScanArea = new Rectangle(newLeft, newTop, newRight - newLeft, newBottom - newTop); ;
-            return ScanArea;
-        }
-
-        private Rectangle? SelectBestArea(int stampwidth, int stampheight, Rectangle ScanArea, FindResults findReturn, FindResults findReturn90)
+        
+        private Rectangle SelectBestArea(int stampwidth, int stampheight, Rectangle ScanArea, FindResults findReturn, FindResults findReturn90)
         {
             Rectangle place2 = new Rectangle(0, 0, stampwidth, stampheight);
             if (findReturn.hasExactMatches())
@@ -237,16 +117,11 @@ namespace SoupSoftware.FindSpace
 
         
 
-        private FindResults FindLocations(int stampwidth, int stampheight, searchMatrix masks, Rectangle ScanArea)
+        private FindResults FindLocations(int stampwidth, int stampheight, SearchMatrix masks, Rectangle ScanArea)
         {
 
-            
-
-           
-
-
             int deepCheckFail = (stampheight * stampwidth) + 1;
-            FindResults findReturn = new FindResults(masks.mask.GetLength(0), masks.mask.GetLength(1), ScanArea);
+            FindResults findReturn = new FindResults(masks.Mask.GetLength(0), masks.Mask.GetLength(1), ScanArea);
             findReturn.containsResults = true;
             //iterate the 2 matrices, if the top left corners X & Y sums is greater than the sticker dimensions its a potential location, 
             // aswe add the loctions transposing the loction to the top left.
@@ -254,7 +129,7 @@ namespace SoupSoftware.FindSpace
 
 
             {
-                if (masks.maskvalsx[p.X, p.Y] > stampwidth && masks.maskvalsy[p.X, p.Y] > stampheight)
+                if (masks.MaskValsX[p.X, p.Y] > stampwidth && masks.MaskValsY[p.X, p.Y] > stampheight)
                 {
 
                     findReturn.possibleMatches[p.X, p.Y] = Settings.SearchAlgorithm.Search(masks,
@@ -284,9 +159,91 @@ namespace SoupSoftware.FindSpace
             return findReturn;
         }
 
-      
 
-      
+        public void MaskToBitmap(string filepath, bool runs = false)
+        {
+            int LinearInterp(int start, int end, double percentage) => start + (int)Math.Round(percentage * (end - start));
+            Color ColorInterp(float percentage, Color start, Color end) =>
+                Color.FromArgb(LinearInterp(start.A, end.A, percentage),
+                               LinearInterp(start.R, end.R, percentage),
+                               LinearInterp(start.G, end.G, percentage),
+                               LinearInterp(start.B, end.B, percentage));
+            Color GradientPick(float percentage, Color Start, Color End)
+            {
+                if (percentage < 0.5)
+                    return ColorInterp(percentage / 0.5f, Start, End);
+                else
+                    return ColorInterp((percentage - 0.5f) / 0.5f, Start, End);
+            }
+
+            int w = image.Width;
+            int h = image.Height;
+            int bpp = Image.GetPixelFormatSize(image.PixelFormat) / 8;
+
+            void WriteInts(string path, int[,] arr)
+            {
+                Bitmap bmp = new Bitmap(w, h, PixelFormat.Format24bppRgb);
+
+                BitmapData bitmapData = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+                IntPtr ptr = bitmapData.Scan0;
+
+                lock (arr)
+                {
+                    IEnumerable<int> ints = arr.Cast<int>();
+                    float max = ints.Max();
+                    float min = ints.Min();
+                    Color red = Color.FromArgb(255, 255, 0, 0);
+                    Color green = Color.FromArgb(255, 0, 255, 0);
+                    for (int j = 0; j < h; j++)
+                    {
+                        for (int i = 0; i < w; i++)
+                        {
+                            Color col = GradientPick((arr[i, j] - min) / max, red, green);
+                            System.Runtime.InteropServices.Marshal.WriteByte(ptr, (j * bitmapData.Stride) + (i * bpp) + 0, col.B);
+                            System.Runtime.InteropServices.Marshal.WriteByte(ptr, (j * bitmapData.Stride) + (i * bpp) + 1, col.G);
+                            System.Runtime.InteropServices.Marshal.WriteByte(ptr, (j * bitmapData.Stride) + (i * bpp) + 2, col.R);
+                        }
+                    }
+                }
+
+                bmp.UnlockBits(bitmapData);
+
+                bmp.Save(path);
+            }
+
+            Bitmap maskBitmap = new Bitmap(w, h, PixelFormat.Format24bppRgb);
+
+            BitmapData data = maskBitmap.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+            IntPtr intPtr = data.Scan0;
+
+
+            lock (masks.Mask)
+            {
+                for (int i = 0; i < w; i++)
+                {
+                    for (int j = 0; j < h; j++)
+                    {
+                        bool maskFilter = masks.Mask[i, j] == 0;
+                        System.Runtime.InteropServices.Marshal.WriteByte(intPtr, (j * data.Stride) + (i * bpp) + 0, 0);
+                        System.Runtime.InteropServices.Marshal.WriteByte(intPtr, (j * data.Stride) + (i * bpp) + 1, maskFilter ? (byte)0 : (byte)255);
+                        System.Runtime.InteropServices.Marshal.WriteByte(intPtr, (j * data.Stride) + (i * bpp) + 2, maskFilter ? (byte)255 : (byte)0);
+                    }
+                }
+            }
+
+            //RGB[] f = sRGB.Deserialize<RGB[]>(buffer)
+            maskBitmap.UnlockBits(data);
+
+            maskBitmap.Save(filepath);
+
+            if (runs)
+            {
+                WriteInts(filepath.Replace(".bmp", "-ColRuns.bmp"), masks.MaskValsY);
+
+                WriteInts(filepath.Replace(".bmp", "-RowRuns.bmp"), masks.MaskValsX);
+            }
+        }
+
 
 
     }

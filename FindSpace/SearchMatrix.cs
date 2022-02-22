@@ -1,104 +1,241 @@
-﻿using SoupSoftware.FindSpace;
-using SoupSoftware.FindSpace.Interfaces;
+﻿using SoupSoftware.FindSpace.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace SoupSoftware.WhiteSpace
+namespace SoupSoftware.FindSpace
 {
-    public class searchMatrix: ISearchMatrix
+    /* Future Optimisation?
+    [StructLayout(LayoutKind.Explicit)]
+    public struct sRGB
     {
 
-        public searchMatrix(Bitmap image, WhitespacerfinderSettings settings)
+        public static byte[] Serialize<T>(T data)
+    where T : struct
         {
-            mask = new byte[image.Width, image.Height];
-            maskvalsx = new int[image.Width, image.Height];
-            maskvalsy = new int[image.Width, image.Height];
-            colSums = new int[image.Height];
-            rowSums = new int[image.Width];
+            var formatter = new BinaryFormatter();
+            var stream = new MemoryStream();
+            formatter.Serialize(stream, data);
+            return stream.ToArray();
+        }
+        public static T Deserialize<T>(byte[] array)
+            where T : struct
+        {
+            var stream = new MemoryStream(array);
+            var formatter = new BinaryFormatter();
+            return (T)formatter.Deserialize(stream);
+        }
+
+        [FieldOffset(0)]
+        public Int64 Value;
+        [FieldOffset(0)]
+        public Int32 Sum;
+        [FieldOffset(4)]
+        public Int32 asRGB;
+        [FieldOffset(5)]
+        public byte R;
+        [FieldOffset(6)]
+        public byte G;
+        [FieldOffset(7)]
+        public byte B;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct RGB
+    {
+
+        public static implicit operator RGB(int val)
+        {
+            return new RGB() { Value = val };
+        }
+
+        [FieldOffset(0)]
+        public int Value;
+        [FieldOffset(1)]
+        public byte R;
+        [FieldOffset(2)]
+        public byte G;
+        [FieldOffset(3)]
+        public byte B;
+    }
+    */
+
+
+
+    public class SearchMatrix : ISearchMatrix
+    {
+        private readonly Bitmap Image;
+
+        public byte[,] Mask { get; private set; }
+        public int[,] MaskValsX { get; private set; }
+        public int[,] MaskValsY { get; private set; }
+        public int[,] DeepCheck { get; private set; }
+        public int[] ColSums { get; private set; }
+        public int[] RowSums { get; private set; }
+        public int Width { get; private set; }
+        public int Height { get; private set; }
+
+        public readonly WhitespacefinderSettings Settings;
+        public List<Rectangle> Stamps = new List<Rectangle>();
+
+        public SearchMatrix(Bitmap image, WhitespacefinderSettings settings)
+        {
             Image = image;
             Settings = settings;
-            
+            Width = Image.Width;
+            Height = Image.Height;
+            Mask = new byte[Width, Height];
+            MaskValsX = new int[Width, Height];
+            MaskValsY = new int[Width, Height];
+            ColSums = new int[Width];
+            RowSums = new int[Height];
 
+            CalculateMask();
+
+            // need to calculate sums for whole image to allow for AutoResizing after init
+            Rectangle wa = new Rectangle(0, 0, Width, Height);
+            Parallel.For(0, Width, x => ColSums[x] = CalculateColSum(x, wa));
+            Parallel.For(0, Height, y => RowSums[y] = CalculateRowSum(y, wa));
+        }
+
+
+
+        public void CalculateMask()
+        {
+            if (Settings.backGroundColor == Color.Empty)
+            {
+                Settings.backGroundColor = GetModalColor();
+            }
+
+            // Generate mask values based on pixel values
+            GetBitmapData(out int depth, out byte[] buffer);
+            int stride = Width * depth;
+
+            Parallel.For(0, Width, x =>
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    uint col = Getbitval(buffer, (y * stride) + (x * depth));
+
+                    Mask[x, y] = (Settings.filterHigh >= col && col >= Settings.filterLow) ? (byte)1 : (byte)0;
+
+                }
+            });
 
         }
-        public byte[,] mask { get; private set; }
-        public int[,] maskvalsx { get; private set; }
-        public int[,] maskvalsy { get; private set; }
-        public int[,] deepCheck { get; private set; }
-        public int[] colSums { get; private set; }
-        public int[] rowSums { get; private set; }
-        public bool maskCalculated { get; private set; } = false;
-        public void CalculateMask(int stampwidth, int stampheight, Rectangle WorkArea)
+
+        // Update mask to mark everything outside of workarea as occupied
+        public void MarkMask(Rectangle WorkArea)
         {
-            GetBits colorEvaluation;
-            if (backColor == Color.Empty)
+            // Set value for columns past the bounds
+            Parallel.For(0, Height, y =>
             {
+                // Left of image to Left of WorkArea
+                for (int x = 0; x < WorkArea.Left; x++)
+                {
+                    Mask[x, y] = 0;
+                }
 
-                backColor = GetModalColor();
+                // Right of WorkArea to Right of image
+                for (int x = WorkArea.Right; x < Width; x++)
+                {
+                    Mask[x, y] = 0;
+                }
+            });
 
-
-            }
-            else
+            // set value for rows between the bounds and previously set columns
+            Parallel.For(WorkArea.Left, WorkArea.Right, x =>
             {
-                backColor = Settings.backGroundColor;
-            }
+                // Top of image to Top of WorkArea
+                for (int y = 0; y < WorkArea.Top; y++)
+                {
+                    Mask[x, y] = 0;
+                }
 
-            if (backColor == Color.White)
+                // Bottom of WorkArea to Bottom of image
+                for (int y = WorkArea.Bottom; y < Height; y++)
+                {
+                    Mask[x, y] = 0;
+                }
+            });
+        }
+
+
+
+        public void AddStampToMask(Rectangle area)
+        {
+            Stamps.Add(area);
+
+            // if any part of the stamp is outside of image borders
+            if (area.Bottom > Height || area.Right > Width || area.Left < 0 || area.Top < 0)
             {
-                colorEvaluation = GetbitvalWhite;
+                throw new ArgumentException($"Rectangle (X={area.X},Y={area.Y}, W={area.Width}, H={area.Height})" +
+                    $" outside of image bounds ({Image.Width},{Image.Height})");
             }
-            else
+
+            for (int x = area.Left - 1; x < area.Right; x++)
             {
-                colorEvaluation = GetbitvalColor;
+                for (int y = area.Top - 1; y < area.Bottom; y++)
+                {
+                    Mask[x, y] = 0;
+                }
             }
+        }
 
-
-            CalculateXVectors(stampwidth, WorkArea, colorEvaluation);
+        public void UpdateMask(int stampwidth, int stampheight, Rectangle WorkArea)
+        {
+            CalculateXVectors(stampwidth, WorkArea);
             CalculateYVectors(stampheight, WorkArea);
         }
 
-
-
-        private Bitmap Image;
-        WhitespacerfinderSettings Settings;
-        private byte redMask;
-        private byte greenMask;
-        private byte blueMask;
-        private const byte autoDetectColorMask = 0b11111000;
-
-
-        private Color backColor { get; set; }
-
-        //public void UpdateMask(int stampwidth, int stampheight, Rectangle ClearArea)
-        //{
-
-
-        //    CalculateXVectors(stampwidth, WorkArea);
-        //    CalculateYVectors(stampheight, WorkArea);
-        //}
-
-
         private Color GetModalColor()
         {
-        
-            
-            int depth;
-            byte[] buffer;
-            GetBitmapData(out depth, out buffer);
-            int len = buffer.Length / depth;
-            int[] RoundCol = new int[len];
-            Parallel.For(0,len, (i) => { 
-                //todo: write new function below does not work.
-                 RoundCol[i]=GetbitColor(buffer, i*depth);
+            const ulong sumMask = UInt64.MaxValue - UInt32.MaxValue;
+            const ulong colorMask = UInt32.MaxValue;
+            const ulong coarseFilterMask = 0xF7F7F7;                // TODO: adaptive coarseFilter based on max brightness
+
+            GetBitmapData(out int depth, out byte[] buffer);
+            int len = Width * Height;
+            ulong[] RoundCol = new ulong[len];
+
+            Parallel.For(0, len, (i) => {
+                // get colour sum and value in the form XXXXXXXX00YYYYYY
+                // where Xs are sum bytes, and Ys are colour value bytes (expected just RGB)
+                RoundCol[i] = GetbitvalColorlong(buffer, i * depth);
+
             });
 
-            int foo = RoundCol.GroupBy(d => d).OrderBy(g => g.Count()).Last().Key;
-            Color c = Color.FromArgb(foo);
-            return c;
+            IEnumerable<IGrouping<ulong, ulong>> colorGroups = RoundCol.GroupBy(d => d & colorMask); //group based on color as int
+            ulong modalColor = colorGroups.OrderBy(g => g.Count()).Last().First(); //most occouring Color
+
+            //cutoff filter (fine based on sum of components)
+            ulong highColRange = ((ulong)Settings.calcHighFilter((int)(modalColor & colorMask), Settings.DetectionRange)) << 32;
+            ulong lowcolRange = ((ulong)Settings.calcLowFilter((int)(modalColor & colorMask), Settings.DetectionRange)) << 32;
+
+            if ((((modalColor & sumMask) >> 32) > (ulong)(765 - Settings.Brightness)))
+                return Color.White;
+
+
+            //the below filters colors which have close sum of RGBs to the modal color (could be a completly diff color but very close sum)
+            ulong[] colorGroupsRefined = colorGroups.Where(g =>
+                (highColRange >= (g.First() & sumMask)) &&          // check if sum is between upper and lower limits
+                (lowcolRange <= (g.First() & sumMask)))
+                                                    .Select(h => h.First()).ToArray();
+
+            //the below filters colors which have close RGBs i.e. only similar colors.
+            ulong[] cols = colorGroupsRefined.Where(x => {
+                ulong coly = (coarseFilterMask & x);
+                return coly == (coarseFilterMask & modalColor);
+            }).ToArray();
+
+            int meanCol = (int)cols.Select(x => (int)(x & colorMask)).Average();
+
+            Color modalCol = Color.FromArgb(meanCol);
+            return modalCol;
         }
 
         private static IEnumerable<int> RangeIterator(int start, int stop, int step)
@@ -115,87 +252,79 @@ namespace SoupSoftware.WhiteSpace
             while (true);
         }
 
-
-        private void CalculateXVectors(int stampwidth, Rectangle WorkArea, GetBits colorEvaluation)
+        private void CalculateXVectors(int stampwidth, Rectangle WorkArea)
         {
 
-            int rowSum;
-
-
-            rowSums = new int[mask.GetLength(1)];
+            RowSums = new int[Mask.GetLength(1)];
             //cycle through the pixels. Set the Mask Matrix to 1 or 0.  
-            int width = Image.Width;
-
-            int depth;
-            byte[] buffer;
-            GetBitmapData(out depth, out buffer);
 
             Parallel.For(WorkArea.Top, WorkArea.Bottom, (int i) =>
             {
-                
-                rowSum = CalculateRowSum(stampwidth, WorkArea, i, buffer, depth, width, Settings, colorEvaluation);
-                rowSums[i] = rowSum;
+                RowSums[i] = CalculateRowSum(i, WorkArea);
+                CalculateRowRuns(i, stampwidth);
             });
 
         }
 
         private void GetBitmapData(out int depth, out byte[] buffer)
         {
-            BitmapData data = Image.LockBits(new Rectangle(0, 0, Image.Width, Image.Height), ImageLockMode.ReadWrite, Image.PixelFormat);
+            BitmapData data = Image.LockBits(new Rectangle(0, 0, Image.Width, Image.Height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
             IntPtr ptr = data.Scan0;
             depth = Bitmap.GetPixelFormatSize(data.PixelFormat) / 8;
-            buffer = new byte[data.Stride * Image.Height];
-            System.Runtime.InteropServices.Marshal.Copy(ptr, buffer, 0, buffer.Length);
+            buffer = new byte[data.Width * data.Height * depth];
+            for (int y = 0; y < data.Height; y++)
+            {
+                IntPtr mem = ptr + y * data.Stride;                                     // set scanline ptr to current row
+                Marshal.Copy(mem, buffer, y * data.Width * depth, data.Width * depth);  // copy bytes we want, ignoring any buffer bytes
+            }
+            //System.Runtime.InteropServices.Marshal.Copy(ptr, buffer, 0, buffer.Length);
+            //RGB[] f =  sRGB.Deserialize<RGB[]>(buffer)
             Image.UnlockBits(data);
         }
 
-        delegate int  GetBits(byte[] buffer, int x, int y, int width, int depth);
 
-        int GetbitvalWhite(byte[] buffer, int x, int y, int width, int depth)
+        uint Getbitval(byte[] buffer, int offset)
         {
-            var offset = ((y * width) + x) * depth;
-            int a = buffer[offset + 0] + buffer[offset + 1] + buffer[offset + 2];
+            uint a = (uint)(buffer[offset + 0] + buffer[offset + 1] + buffer[offset + 2]);
             return a;
         }
-        int GetbitvalColor(byte[] buffer, int x, int y, int width, int depth)
+        ulong GetbitvalColorlong(byte[] buffer, int offset)
         {
-            var offset = ((y * width) + x) * depth;
-            int a = buffer[offset + 0] + buffer[offset + 1] + buffer[offset + 2];
+            //pads a long most significant int(32), is a sum of the colors
+            //least significant int(32) is the color as int(32)
+            ulong a = ((ulong)(buffer[offset + 0] + buffer[offset + 1] + buffer[offset + 2]) << 32) | //sums
+              GetbitvalColor(buffer, offset);
             return a;
         }
 
-        int GetbitColor(byte[] buffer, int offset )
+        uint GetbitvalColor(byte[] buffer, int offset)
         {
-            int ColorMask = (buffer[offset + 0] & autoDetectColorMask)<<16 | (buffer[offset + 1] & autoDetectColorMask)<<8 | (buffer[offset + 2] & autoDetectColorMask);
-            return ColorMask;
+            //gets a color as an int (alpha stripped)
+            uint a = //sums
+                (uint)((buffer[offset + 0]) | //red
+                (buffer[offset + 1]) << 8 | //green
+                (buffer[offset + 2]) << 16);//blue
+            return a;
         }
 
+        private void CalculateRowRuns(int y, int stampwidth)
+        {
+            int runval = 0;
+            for (int x = Width - 1; x >= 0; x--)
+            {
+                int val = Mask[x, y];
+                //sum the number of non 0 cells in a row store in 'x' matrix
+                runval = val == 0 ? 0 : val + runval;
+                int saveval = runval;//(runval < stampwidth) ? 0 : runval;
+                MaskValsX[x, y] = saveval;
+            }
+        }
 
-        private int CalculateRowSum(int stampwidth, Rectangle WorkArea, int y, byte[] buffer, int depth, int width, WhitespacerfinderSettings Settings, GetBits colorEvaluation)
+        private int CalculateRowSum(int y, Rectangle WorkArea)
         {
             int rowSum = 0;
-            int runval = 0;
-            int filterVal = Settings.CutOffVal - Settings.Brightness;
-            for (int x = WorkArea.Right; x >= WorkArea.Left; x--)
-            {
-                byte val;
-                if (!maskCalculated)
-                {
-                  val = (colorEvaluation.Invoke(buffer,x,y,width,depth) > filterVal) ? (byte)1 : (byte)0;
-
-                    mask[x, y] = val;
-                }
-                else
-                {
-                    val = mask[x, y];
-                }
-                //also whilst we are iterating sum the number of non 0 cells in a row store in 'x' matrix
-                runval = val == 0 ? 0 : val + runval;
-                int saveval = (runval < stampwidth) ? 0 : runval;
-                rowSum = (1 - val) + rowSum;
-                maskvalsx[x, y] = saveval;
-            }
-
+            for (int x = WorkArea.Right - 1; x >= WorkArea.Left; x--)
+                rowSum += (1 - Mask[x, y]);
 
             return rowSum;
         }
@@ -203,36 +332,38 @@ namespace SoupSoftware.WhiteSpace
         private void CalculateYVectors(int stampheight, Rectangle WorkArea)
         {
 
-            colSums = new int[mask.GetLength(0)];
+            ColSums = new int[Mask.GetLength(0)];
             //now reiterare as sum the number of non 0 cells in a column store in 'y' matrix, we sum from bottom up.
 
-            int colSum;
-            Parallel.For(WorkArea.Left, WorkArea.Right, (x) =>
-            {
-                
-
-                colSum = CalculateColSum(stampheight, WorkArea, x);
-                colSums[x] = colSum;
+            Parallel.For(WorkArea.Left, WorkArea.Right, (x) => {
+                ColSums[x] = CalculateColSum(x, WorkArea);
+                CalculateColRuns(x, stampheight);
             });
-
 
 
         }
 
-        private int CalculateColSum(int stampheight, Rectangle WorkArea, int x)
+        private void CalculateColRuns(int x, int stampheight)
         {
-            int colSum = 0;
+
             int runval = 0;
-            for (int y = WorkArea.Bottom; y >= WorkArea.Top; y--)
+            for (int y = Height - 1; y >= 0; y--)
             {
-                int val = mask[x, y];
+                int val = Mask[x, y];
                 runval = val == 0 ? 0 : val + runval;
-                colSum = (1 - val) + colSum;
-                int saveval = (runval < stampheight) ? 0 : runval;
-                maskvalsy[x, y] = saveval;
+                int saveval = runval;//(runval < stampheight) ? 0 : runval;
+                MaskValsY[x, y] = saveval;
             }
-            runval = 0;
-            return colSum;
+
+        }
+
+        private int CalculateColSum(int x, Rectangle WorkArea)
+        {
+            int sum = 0;
+            for (int y = WorkArea.Bottom - 1; y >= WorkArea.Top; y--)
+                sum += (1 - Mask[x, y]);
+
+            return sum;
         }
 
 

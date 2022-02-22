@@ -9,7 +9,6 @@ namespace SoupSoftware.FindSpace.Interfaces
 
         IEnumerable<Point> GetOptimisedPoints(Rectangle rect);
 
-
     }
 
     public interface ICoordinateSorter
@@ -24,28 +23,40 @@ namespace SoupSoftware.FindSpace.Interfaces
 
     }
 
-    public interface iMargin
+    public interface IMargin
     {
-
-        bool AutoExpand { get; set; }
+        bool AutoExpand { get; }
         int Left { get; }
         int Right { get; }
         int Top { get; }
         int Bottom { get; }
-        Rectangle GetworkArea(Bitmap image);
+        Rectangle GetWorkArea(SearchMatrix masks);
     }
 
-    public interface ISearchMatrix {
+    public interface IAutoMargin : IMargin
+    {
+        bool Resized { get; }
 
-         byte[,] mask { get;  }
-         int[,] maskvalsx { get;  }
-         int[,] maskvalsy { get;  }
-         int[,] deepCheck { get; }
-         int[] colSums { get; }
-         int[] rowSums { get;  }
-         bool maskCalculated { get;}
-        void CalculateMask(int stampwidth, int stampheight, Rectangle WorkArea);
+        void Resize(SearchMatrix masks);
+    }
 
-            }
+    public interface ISearchMatrix
+    {
+
+        byte[,] Mask { get; }
+        int[,] MaskValsX { get; }
+        int[,] MaskValsY { get; }
+        int[,] DeepCheck { get; }
+        int[] ColSums { get; }
+        int[] RowSums { get; }
+        void CalculateMask();
+        void UpdateMask(int stampwidth, int stampheight, Rectangle WorkArea);
+
+    }
+
+    public interface IDeepSearch
+    {
+        int Search(SearchMatrix masks, int Left, int Top, int Width, int Height);
+    }
 }
 
