@@ -185,10 +185,12 @@ namespace FindSpaceTests
 
             Trace.WriteLine($"In: 0x{color.ToArgb() & 0xFFFFFF:X6}, Modal: 0x{Colorres.ToArgb():X6}");
             Assert.AreEqual(color.ToArgb() & 0x00FFFFFF, Colorres.ToArgb());
+            Assert.AreEqual(color.ToArgb() & 0x00FFFFFF, Colorres.ToArgb() & 0x00FFFFFF);
         }
 
         [DataTestMethod]
         //[DataRow("TestImages/Test-Real3.bmp", typeof(BottomRightOptimiser))]
+        //[DataRow("TestImages/Test-Real5.bmp", typeof(BottomOptimiser))]
         [DynamicData(nameof(GetTestData), DynamicDataSourceType.Method)]
         public void MultipleStampsTest(string testfilepath, Type type)
         {
@@ -216,6 +218,9 @@ namespace FindSpaceTests
                 new Rectangle(0,0,40,100),
                 new Rectangle(0,0,41,54),
                 new Rectangle(0,0,84,35),
+                //new Rectangle(0,0,40,100),
+                //new Rectangle(0,0,41,54),
+                //new Rectangle(0,0,84,35),
                 new Rectangle(0,0,59,72)
             };
 #endif
@@ -230,6 +235,11 @@ namespace FindSpaceTests
             wsf.Brightness = 30;
 
 
+            wsf.BailOnExact = 1;
+            wsf.DistanceWeight = 0.0f;
+            wsf.GroupingWeight = 0.0f;
+            wsf.PercentageToScan = 25;
+            wsf.PercentageOverlap = 0;
             wsf.backGroundColor = Color.Empty;
             wsf.Margins = new AutomaticMargin();
             wsf.SearchAlgorithm = new SoupSoftware.FindSpace.ExactSearch();
@@ -262,6 +272,8 @@ namespace FindSpaceTests
                 int width = (b.Width - x - w.Settings.Margins.Right);
                 int height = (b.Height - y - w.Settings.Margins.Bottom);
                 g.DrawRectangle(Pens.Blue, new Rectangle(x, y, width, height));
+
+                g.DrawRectangle(Pens.Green, w.Settings.Optimiser.GetFocusArea(new Rectangle(x, y, width, height)));
                 g.Flush();
                 extension = System.IO.Path.GetExtension(testfilepath);
                 string filepath = testfilepath.Replace(extension, optimiser.GetType().Name + "-Multiple" + extension);
